@@ -33,7 +33,7 @@ IUPAC_CODES_DICT = {'A':'[Aa]', 'T':'[TtUu]', 'U':'[TtUu]', 'C':'[Cc]', 'G':'[Gg
 #Dictionary where the keys are IUPAC codes and values are sequence bases
 
 def fasta_string_inator(fasta_file):
-    '''Creates a dictionary where
+    '''Reads fasta file to create a dictionary where
     keys: gene names
     values: DNA/RNA sequence as string'''
     gene_sequence_dict = {}
@@ -60,7 +60,7 @@ GENE_SEQUENCE_DICT = fasta_string_inator(FASTA_FILE)
 
 
 def iupac_regex_inator(motifs_file):
-    '''Creates a dictionary where:
+    '''Reads motifs file and creates a dictionary where:
     keys: motifs 
     values: regex terms that can be used to locate that motif, accounting for IUPAC ambiguous nucleotide notation'''
     motif_regex_dict = {}
@@ -124,7 +124,6 @@ def pycairo_figure_inator():
     number_of_genes = len(GENE_SEQUENCE_DICT.keys())
     number_of_motifs = 1
     #Number of genes and motifs needed for adjusting height of figure
-
 
     seq_lengths_list = []
     for seq in GENE_SEQUENCE_DICT.values():
@@ -198,6 +197,8 @@ def pycairo_figure_inator():
         context.set_source_rgba(0,0,0,1)
         context.show_text(motif)
         context.stroke()
+    
+    print(seq_lengths_list)
         
 
 
