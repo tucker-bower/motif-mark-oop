@@ -11,7 +11,7 @@
 # python motif_mark_V2.py -f example_data/Figure_1.fasta -m example_data/Fig_1_motifs.txt
 
 import argparse
-import re
+import regex as re
 import cairo
 
 parser = argparse.ArgumentParser(description = 'Input: fasta file with exons capitalized and motifs file | Output: Motif location visualization ')
@@ -37,6 +37,10 @@ IUPAC_CODES_DICT = {'A':'[Aa]', 'T':'[TtUu]', 'U':'[TtUu]', 'C':'[Cc]', 'G':'[Gg
 
 ### global variables for pycairo ###
 LEFT_MARGIN = 10
+TOP_MARGIN = 10
+SPACE_BETWEEN_GENES = 60
+SPACE_BTW_HEADER_AND_GENE = 30
+SPACE_BTW_LEGEND_MOTIFS = 20
 
 def color_brew_inator():
     '''Loads the color palette in from a user given file'''
@@ -67,80 +71,6 @@ def make_colors_ints_inator():
 
 COLORS_INTS_LIST = make_colors_ints_inator()
 
-class GeneGroup:
-    '''Parent class that controls the drawing of all pieces for a gene'''
-    def __init__(self, gene_number, header, gene, exon, motifs):
-        self.gene_number = gene_number
-        self.header = header
-        self.gene = gene
-        self.exon = exon
-        self.motifs = motifs
-
-    def draw(self): 
-        self.header.draw()
-        self.gene.draw()
-        self.exon.draw()
-        self.motifs.draw()
-
-class Header:
-    '''contains the header, draws the header'''
-    def __init__(self, header):
-        self.header = header
-
-    def draw(self):
-        x = LEFT_MARGIN
-        y = 1
-
-
-class Gene:
-    '''contains header, gene length (total read from fasta, and gene #, method 
-    to draw itself'''
-    def __init__(self, length, gene_count):
-        self.length = length
-        self.gene_count = gene_count
-    def draw(self):
-        x = LEFT_MARGIN
-        y = self.gene_count * 30 + 30
-        context.move_to(x,y)
-        context.set_line_width(1)
-        context.line_to(x + self.length, y)
-
-        context.stroke()
-
-
-        #context.show_text(gene)
-
-class Exon:
-    '''contains start_pos_pos, gene length (total read from fasta), length,
-     and gene # & method to draw itself'''
-    def __init__(self, start_pos, length, gene_count):
-        self.start_pos = start_pos
-        self.length = length
-        self.gene_count = gene_count
-
-    def draw(self):
-        x = LEFT_MARGIN + self.start_pos
-        y = self.gene_count * 30 + 30
-        context.set_line_width(20)
-        context.move_to(x ,y)
-        context.line_to(x+self.length, y)
-        context.stroke()
-
-class Motif:
-    '''contains start, length, gene_count)'''
-    def __init__(self, start_pos, length, gene_count):
-        self.start_pos = start_pos
-        self.length = length
-        self.gene_count = gene_count
-
-    def draw(self):
-        x = LEFT_MARGIN + self.start_pos
-        y = self.gene_count * 30 + 30
-        context.set_line_width(20)
-        context.move_to(x ,y)
-        context.line_to(x+self.length, y)
-        context.stroke()
-
 def fasta_string_inator(fasta_file):
     '''Reads fasta file to create a dictionary where
     keys: gene names
@@ -154,7 +84,6 @@ def fasta_string_inator(fasta_file):
         if line.startswith('>'):
             #Header
             header = re.findall('>(.+)' , line)[0]
-            print(header)
             #Extracting gene ID
         else:
             if header not in gene_sequence_dict:
@@ -167,21 +96,167 @@ def fasta_string_inator(fasta_file):
 
 GENE_SEQUENCE_DICT = fasta_string_inator(FASTA_FILE)
 
-print(GENE_SEQUENCE_DICT)
+def iupac_regex_inator(motifs_file):
+    '''Reads motifs file and creates a dictionary where:
+    keys: motifs 
+    values: regex terms that can be used to locate that motif, accounting for IUPAC ambiguous nucleotide notation'''
+    motif_regex_dict = {}
+    while True:
+        motif = motifs_file.readline().rstrip()
+        motif_regex = ''
+        if motif == '':
+            break
+        #EOF
+        for character in motif:
+            motif_regex += IUPAC_CODES_DICT[character.upper()]
+        #Translating every single NUC character into a regex term for every possible character that COULD be that character
+        motif_regex_dict[motif] = motif_regex
+        #Storing those regex terms in a dictionary
+    return motif_regex_dict
 
-INSR = GeneGroup(1,'test_header','atagagaga', ) 
-# def populate_object_data_inator():
-#     gene_groups = [gene_groups]
+MOTIF_REGEX_DICT = iupac_regex_inator(MOTIFS_FILE)
+
+def motif_coordinates_inator(motif, sequence):
+    '''Uses regular expressions to search for motifs in a sequence of bases and returns a list of startpoints and a list of lengths of each occurence of that motif in a list.'''
+    motif_starts_list = []
+    motif_lengths_list = []
+    for motif_match in re.finditer(motif, sequence, overlapped=True):
+        motif_start = motif_match.start() + 1
+        motif_end = motif_match.end()
+        motif_length =  motif_end - motif_start +1
+        motif_starts_list.append(motif_start)
+        motif_lengths_list.append(motif_length)
+    return motif_starts_list, motif_lengths_list
+
+# test, west = motif_coordinates_inator ('tag','atagatag')
+# print('starts', test)
+# print(' ')
+# print('lengths', west)
+
+class Header:
+    '''contains the header, draws the header'''
+    def __init__(self, header, gene_number):
+        self.header = header
+        self.gene_number = gene_number
+
+    def draw(self):
+        x = LEFT_MARGIN
+        y = self.gene_number * SPACE_BETWEEN_GENES + TOP_MARGIN
+        context.move_to(x,y)
+        context.set_source_rgba(0, 0, 0, 1)
+        context.select_font_face('Arial', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        context.set_font_size(12)
+        context.show_text(self.header)
+        context.stroke()
+
+class Gene:
+    ''' gene length (total read from fasta, and gene #, method 
+    to draw itself'''
+    def __init__(self, length, sequence, gene_number):
+        self.length = length
+        self.sequence = sequence
+        self.gene_number = gene_number
+
+    def draw(self):
+        x = LEFT_MARGIN
+        y = self.gene_number * SPACE_BETWEEN_GENES + SPACE_BTW_HEADER_AND_GENE + TOP_MARGIN
+        context.move_to(x,y)
+        context.set_source_rgba(0, 0, 0, 1)
+        context.set_line_width(1)
+        context.line_to(x + self.length, y)
+        context.stroke()
+        #context.show_text(gene)
+
+class Exon:
+    '''contains start_pos_pos, gene length (total read from fasta), length,
+     and gene # & method to draw itself'''
+    def __init__(self, start_pos, length, gene_number):
+        self.start_pos = start_pos
+        self.length = length
+        self.gene_number = gene_number
+
+    def draw(self):
+        x = LEFT_MARGIN + self.start_pos
+        y = self.gene_number * SPACE_BETWEEN_GENES + SPACE_BTW_HEADER_AND_GENE +TOP_MARGIN
+        context.set_line_width(20)
+        context.set_source_rgba(0, 0, 0, 1)
+        context.move_to(x ,y)
+        context.line_to(x+self.length, y)
+        context.stroke()
+
+class Motif:
+    '''contains start, length, gene_number)'''
+    def __init__(self, start_pos, length, color, gene_number):
+        self.start_pos = start_pos
+        self.length = length
+        self.gene_number = gene_number
+        self.color = color
+
+    def draw(self):
+        x = LEFT_MARGIN + self.start_pos
+        y = self.gene_number * SPACE_BETWEEN_GENES + SPACE_BTW_HEADER_AND_GENE + TOP_MARGIN
+        context.set_line_width(20)
+        context.set_source_rgba(self.color[0][0], self.color[0][1], self.color[0][2], self.color[0][3])
+        context.move_to(x ,y)
+        context.line_to(x+self.length, y)
+        context.stroke()
+
+class GeneGroup:
+    '''Parent class that controls the drawing of all pieces for a gene'''
+    def __init__(self, gene_number):
+        self.gene_number = gene_number
+        self.motifs = []
+        
+    def draw(self): 
+        self.header.draw()
+        self.gene.draw()
+        self.exon.draw()
+        for motifobj_list in self.motifs:
+            for motif in motifobj_list:
+                motif.draw()
 
 
-#
-### PLACEHOLDER CODE ###
-#
-max_seq_length = 800
-number_of_genes = 4
-#
-### PLACEHOLDER CODE ###
-#
+
+def generate_gene_groups_inator():
+    '''generates GeneGroup objects with gene_numbers starting at 1'''
+    gene_groups = list()
+    for i in range(len(GENE_SEQUENCE_DICT.keys())): #the keys are the headers
+        gene_groups.append(GeneGroup(i))
+    return(gene_groups)
+
+GENE_GROUPS = generate_gene_groups_inator()
+
+def populate_objects_inator():
+    '''populate GeneGroups and all subclassess'''
+    for gene_group in GENE_GROUPS:
+        gene_group.header = Header(list(GENE_SEQUENCE_DICT.keys())[gene_group.gene_number], gene_group.gene_number) #finding header
+
+        gene_group.gene = Gene(len(list(GENE_SEQUENCE_DICT.values())[gene_group.gene_number]), list(GENE_SEQUENCE_DICT.values())[gene_group.gene_number], gene_group.gene_number) #finding gene
+
+        exon_start_location = re.search('[A-Z]+', gene_group.gene.sequence).start() +1
+        exon_end_location = re.search('[A-Z]+', gene_group.gene.sequence).end()
+        exon_length = exon_end_location - exon_start_location
+        gene_group.exon = Exon(exon_start_location, exon_length, gene_group.gene_number)
+
+        motif_counter = 0
+        for motif in MOTIF_REGEX_DICT.values():
+            motif_objects = []
+            motif_counter += 1
+            motif_color = [(COLORS_INTS_LIST[motif_counter-1][0]/255, COLORS_INTS_LIST[motif_counter-1][1]/255, COLORS_INTS_LIST[motif_counter-1][2]/255, 0.7)]
+            motif_starts_list, motif_lengths_list = motif_coordinates_inator(motif, gene_group.gene.sequence)
+            for i in range(len(motif_starts_list)):
+                motif_objects.append(Motif(motif_starts_list[i], motif_lengths_list[i], motif_color, gene_group.gene_number))
+            gene_group.motifs.append(motif_objects)
+        #Marking the motifs
+
+populate_objects_inator()
+
+### Getting shape of data (seq lengths, and # of genes)
+seq_lengths = list()
+for seq in (GENE_SEQUENCE_DICT.values()):
+    seq_lengths.append(len(seq))
+max_seq_length = max(seq_lengths)
+number_of_genes = len(GENE_SEQUENCE_DICT.keys())
 
 ### initialize pycairo 'context' object (the surface we draw on)
 figure_surface = cairo.SVGSurface(OUTPUT_FILE_NAME, max_seq_length + 100, number_of_genes * 75 + 100)
@@ -190,10 +265,33 @@ context.set_source_rgba(0, 0, 0, 1)
 context.select_font_face('Arial', cairo.FONT_SLANT_NORMAL)
 context.set_font_size(12)
 
-def beautiful_picture_inator():
-    gene_examp = Gene(800,1)
-    gene_examp.draw()
-    exon_examp = Exon(100,100, 1)
-    exon_examp.draw()
-beautiful_picture_inator()
+def pretty_picture_painter():
+    '''populate GeneGroups and all subclassess'''
+    for gene_group in GENE_GROUPS:
+        gene_group.draw()
+    #draws most of the figure
 
+    context.set_source_rgba(0,0,0,1)
+    x = LEFT_MARGIN
+    y =len(GENE_SEQUENCE_DICT.values()) * (SPACE_BETWEEN_GENES +1) +20
+    context.move_to(x,y)
+    context.set_font_size(8)
+    context.show_text('Legend')
+    #Writing the word legend
+
+    legend_counter = 0
+    for motif in MOTIF_REGEX_DICT.keys():
+        legend_counter += 1
+        x = LEFT_MARGIN
+        y = len(GENE_SEQUENCE_DICT.values()) * (SPACE_BETWEEN_GENES +1) + legend_counter * SPACE_BTW_LEGEND_MOTIFS + 20
+        context.move_to(x,y)
+        context.set_line_width(12)
+        context.set_source_rgba(COLORS_INTS_LIST[legend_counter-1][0]/255,COLORS_INTS_LIST[legend_counter-1][1]/255,COLORS_INTS_LIST[legend_counter-1][2]/255,1)
+        context.line_to(x+5, y)
+        context.stroke()
+        context.move_to(x+10, y)
+        context.set_source_rgba(0,0,0,1)
+        context.show_text(motif)
+        context.stroke()
+
+pretty_picture_painter()
