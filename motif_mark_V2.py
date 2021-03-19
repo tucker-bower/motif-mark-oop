@@ -67,22 +67,40 @@ def make_colors_ints_inator():
 
 COLORS_INTS_LIST = make_colors_ints_inator()
 
-print(COLORS_INTS_LIST)
+class GeneGroup:
+    '''Parent class that controls the drawing of all pieces for a gene'''
+    def __init__(self, gene_number, header, gene, exon, motifs):
+        self.gene_number = gene_number
+        self.header = header
+        self.gene = gene
+        self.exon = exon
+        self.motifs = motifs
+
+    def draw(self): 
+        self.header.draw()
+        self.gene.draw()
+        self.exon.draw()
+        self.motifs.draw()
+
+class Header:
+    '''contains the header, draws the header'''
+    def __init__(self, header):
+        self.header = header
+
+    def draw(self):
+        x = LEFT_MARGIN
+        y = 1
+
 
 class Gene:
     '''contains header, gene length (total read from fasta, and gene #, method 
     to draw itself'''
-    def __init__(self, header, length, gene_count):
-        self.header = header
+    def __init__(self, length, gene_count):
         self.length = length
         self.gene_count = gene_count
-
     def draw(self):
         x = LEFT_MARGIN
-        y = self.gene_count * 30
-        context.move_to(x,y)
-        context.show_text(self.header)
-        y += 30
+        y = self.gene_count * 30 + 30
         context.move_to(x,y)
         context.set_line_width(1)
         context.line_to(x + self.length, y)
@@ -122,6 +140,40 @@ class Motif:
         context.move_to(x ,y)
         context.line_to(x+self.length, y)
         context.stroke()
+
+def fasta_string_inator(fasta_file):
+    '''Reads fasta file to create a dictionary where
+    keys: gene names
+    values: DNA/RNA sequence as string'''
+    gene_sequence_dict = {}
+    while True:
+        line = fasta_file.readline().rstrip()
+        if line == '':
+            break
+            #End of file
+        if line.startswith('>'):
+            #Header
+            header = re.findall('>(.+)' , line)[0]
+            print(header)
+            #Extracting gene ID
+        else:
+            if header not in gene_sequence_dict:
+                gene_sequence_dict[header] = line
+                #Initializing string in dictionary
+            else:
+                gene_sequence_dict[header] += line
+                #Adding all lines of sequence together into a single continuous string 
+    return gene_sequence_dict
+
+GENE_SEQUENCE_DICT = fasta_string_inator(FASTA_FILE)
+
+print(GENE_SEQUENCE_DICT)
+
+INSR = GeneGroup(1,'test_header','atagagaga', ) 
+# def populate_object_data_inator():
+#     gene_groups = [gene_groups]
+
+
 #
 ### PLACEHOLDER CODE ###
 #
@@ -139,9 +191,9 @@ context.select_font_face('Arial', cairo.FONT_SLANT_NORMAL)
 context.set_font_size(12)
 
 def beautiful_picture_inator():
-    gene_examp = Gene('foo', 800, 1)
+    gene_examp = Gene(800,1)
     gene_examp.draw()
-    exon_examp = Exon(100,100,1)
+    exon_examp = Exon(100,100, 1)
     exon_examp.draw()
 beautiful_picture_inator()
 
