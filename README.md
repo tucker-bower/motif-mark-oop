@@ -11,6 +11,7 @@ The details of the bio-conda environment this program was developed and tested w
 
 ## Executing the Script
 To get started, here is a command that runs the program with the example data from this repository:
+
 ```
 python motif_mark.py -f example_data/Figure_1.fasta -m example_data/Fig_1_motifs.txt
 ```
@@ -24,4 +25,4 @@ Parameter Name | Explanation
 --colors (-c) | File containing rgb values for desired motif colors, see [example](https://github.com/tucker-bower/motif-mark/tree/main/example_data/pastels.txt)
 --output (-o) | Output directory (ex: ./example_data/)
 ## Example Output
-![figure1.svg](https://github.com/tucker-bower/motif-mark/blob/main/example_data/Figure_1.svg)
+![figure1.svg](https://github.com/tucker-bower/motif-mark-oop/blob/main/example_data/Figure_1.svg)
